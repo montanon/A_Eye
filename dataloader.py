@@ -8,6 +8,18 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 import random
 
+class ToCuda(object):
+
+    def __call__(self, sample):
+
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+        image = sample['image'].to(device=device, dtype=torch.float)
+
+        image = image.unsqueeze(0)
+
+        return {'image': image}
+
 class Rescale(object):
 
     def __init__(self, output_size):
@@ -35,6 +47,7 @@ class Rescale(object):
 class ToTensor(object):
 
     def __call__(self, sample):
+
         image = sample['image']
 
         image = image.transpose((2, 0, 1))
@@ -111,7 +124,8 @@ if __name__ == '__main__':
                                 root_dir='./data',
                                 transform=transforms.Compose([
                                     Rescale(100),
-                                    ToTensor()
+                                    ToTensor(),
+                                    ToCuda()
                                 ])
                                 )
 
