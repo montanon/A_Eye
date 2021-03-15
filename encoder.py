@@ -87,18 +87,7 @@ class Encoder3D(Module):
         else:
             self.conv2d_pool_layers = []   
 
-
-        self.flatten = self.create_flatten_layer() 
-
-
-        self.dense_in_features = ast.literal_eval(self.args['dense_in_channels'])
-        self.dense_out_features = ast.literal_eval(self.args['dense_out_channels'])
-
-        self.dense_layers = [self.create_connected_layer(n_dense) for n_dense in range(int(self.args['n_dense']))]
-
         self.model = self.create_sequential().cuda()
-
-        self.output_shape = []
 
     def create_sequential(self):
 
@@ -111,12 +100,6 @@ class Encoder3D(Module):
         for (conv2d, dropout, max_pool) in zip(self.conv2d_layers, self.conv2d_dropout_layers, self.conv2d_pool_layers):
 
             sequential.extend([conv2d, dropout, max_pool])
-
-        sequential.append(self.flatten)
-
-        for dense in self.dense_layers:
-
-            sequential.append(dense)
 
         return Sequential(*sequential)
 
