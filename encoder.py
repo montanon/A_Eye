@@ -19,29 +19,17 @@ import torchvision
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 
+from dataloader import RGBImageDataset, Rescale, ToTensor,ToCuda
+
 import matplotlib.pyplot as plt
 
-def ArgsParse():
-
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument('--nconv', type=int, default=3)
-
-    parser.add_argument('--activation', type=str, default='relu')
-
-    parser.add_argument('--padding', type=str, default='same')
-
-    args = parser.parse_args()
-
-    return args
-
-def ConfigParse(cfg_file):
+def ConfigParse(cfg_file, model='ENCODER'):
 
     parser = configparser.ConfigParser()
 
     parser.read(cfg_file)
 
-    args = parser['ENCODER']
+    args = parser[model]
 
     return args
 
@@ -108,7 +96,9 @@ class Encoder3D(Module):
 
         self.dense_layers = [self.create_connected_layer(n_dense) for n_dense in range(int(self.args['n_dense']))]
 
-        self.model = self.create_sequential()
+        self.model = self.create_sequential().cuda()
+
+        self.output_shape = []
 
     def create_sequential(self):
 
@@ -137,6 +127,7 @@ class Encoder3D(Module):
                 out_channels=self.conv3d_out_channels[n_layer],
                 kernel_size=self.conv3d_kernels[n_layer],
                 padding=int(self.args['padding']),
+                stride=int(self.args['stride']),
                 bias=True              
             )
                     
@@ -144,7 +135,8 @@ class Encoder3D(Module):
 
         return MaxPool3d(
                 kernel_size=self.conv3d_pool_kernels[n_layer],
-                padding=int(self.args['padding'])
+                padding=int(self.args['padding']),
+                return_indices=True
             )     
         
     def create_2d_conv_layer(self, n_layer):
@@ -161,7 +153,8 @@ class Encoder3D(Module):
 
         return MaxPool2d(
                 kernel_size=self.conv2d_pool_kernels[n_layer],
-                padding=int(self.args['padding'])
+                padding=int(self.args['padding']),
+                return_indices=True
             )     
 
     def create_flatten_layer(self):
@@ -184,25 +177,38 @@ class Encoder3D(Module):
 
     def forward(self, x):
 
-        output = self.model(x)
+        idxs = []
 
-        return output
+        for layer in self.model:
+
+            if isinstance(layer, MaxPool2d) or isinstance(layer, MaxPool3d):
+                x, idx = layer(x)
+                idxs.append(idx)
+
+            else:
+                x = layer(x)
+
+        return x, idxs
 
 if __name__ == '__main__':
 
     EC = Encoder3D('./config/config.cfg')
 
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    img_dataset = RGBImageDataset(csv_file='fotos_idx.csv',
+                                root_dir='./data',
+                                transform=transforms.Compose([
+                                    Rescale(100),
+                                    ToTensor(),
+                                    ToCuda()
+                                ])
+                                )
 
-    transform = transforms.Compose([ 
-            transforms.ToTensor(),
-            transforms.Normalize([0.0], [1.0]) 
-        ])
+    #img_dataset.show_sample_tensors()
 
-    images = pd.read_csv('data/fotos_idx.csv', index_col=0)
+    x = img_dataset[0]
 
-    
+    output, pool_idxs = EC(x['image'])
 
-    print(images.columns)
+    print(output.shape)
 
     # TODO: Agregar activation
