@@ -20,9 +20,9 @@ class Rescale(object):
         h, w = image.shape[:2]
         if isinstance(self.output_size, int):
             if h > w:
-                new_h, new_w = self.output_size * h / w, self.output_size
+                new_h, new_w = self.output_size * 1.5, self.output_size
             else:
-                new_h, new_w = self.output_size, self.output_size * w / h
+                new_h, new_w = self.output_size, self.output_size * 1.5
         else:
             new_h, new_w = self.output_size
 
@@ -90,13 +90,34 @@ class RGBImageDataset(Dataset):
 
         plt.show()
 
+    def show_sample_tensors(self):
+
+        for n_sample, i in enumerate(self.imgs_df.sample(n=4).index):
+            sample = self[i]
+
+            print(i, sample['image'].size())
 
 if __name__ == '__main__':
 
-    img_transform = transforms.Compose([Rescale(100)])
-    img_dataset = RGBImageDataset(csv_file='fotos_idx.csv', root_dir='./data', transform=img_transform)
+    img_dataset = RGBImageDataset(csv_file='fotos_idx.csv',
+                                root_dir='./data'
+                                )
 
     img_dataset.show_sample_images()
+
+    img_transform = transforms.Compose([Rescale(100)])
+
+    img_dataset = RGBImageDataset(csv_file='fotos_idx.csv',
+                                root_dir='./data',
+                                transform=transforms.Compose([
+                                    Rescale(100),
+                                    ToTensor()
+                                ])
+                                )
+
+    img_dataset.show_sample_tensors()
+
+    
 
     
 
