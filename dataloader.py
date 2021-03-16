@@ -130,9 +130,3 @@ if __name__ == '__main__':
                                 )
 
     img_dataset.show_sample_tensors()
-
-    
-
-    
-
-        
